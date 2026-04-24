@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrena tu propio algoritmo de recomendaciones</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --card-soft: #1f2937;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --border: rgba(255, 255, 255, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1e293b, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      margin: 0 0 1rem;
+      line-height: 1.05;
+    }
+
+    header p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.45rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 3rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+
+    .tab-button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.8rem 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      color: var(--text);
+      background: rgba(17, 24, 39, 0.84);
+    }
+
+    .tab-button.active {
+      color: #082f49;
+      background: var(--accent);
+    }
+
+    .tab-content { display: none; }
+
+    .tab-content.active {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .mission {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(167, 139, 250, 0.16));
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 1.25rem;
+    }
+
+    .mission h2,
+    .panel h2,
+    .videos h2,
+    .challenge h2,
+    .explain-card h2 {
+      margin-top: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .panel,
+    .metrics,
+    .videos,
+    .challenge,
+    .explain-card {
+      background: rgba(17, 24, 39, 0.84);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 1.25rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    .slider-group { margin: 1.1rem 0; }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    label { font-weight: 700; }
+
+    .value {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin: 0.2rem 0 0;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(130px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+      border-radius: 1.2rem;
+      padding: 1rem;
+      min-height: 126px;
+    }
+
+    .metric-card h3 {
+      margin: 0 0 0.8rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+    }
+
+    .bar {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: var(--accent);
+      transition: width 250ms ease;
+    }
+
+    .feedback {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 1rem;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #e0f2fe;
+      font-weight: 700;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .video-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1.25rem;
+      min-height: 190px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid var(--border);
+      background: linear-gradient(160deg, #334155, #111827);
+    }
+
+    .video-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 45%);
+      pointer-events: none;
+    }
+
+    .video-card h3 {
+      position: relative;
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .video-card .category {
+      position: relative;
+      width: fit-content;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .score {
+      position: relative;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .challenge ul { margin-bottom: 0; }
+
+    .challenge li { margin-bottom: 0.5rem; }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.75rem 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: #082f49;
+      background: var(--accent);
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: var(--card-soft);
+      border: 1px solid var(--border);
+    }
+
+    .explain-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .formula {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem;
+      overflow-x: auto;
+      color: #bae6fd;
+      font-weight: 800;
+      line-height: 1.7;
+    }
+
+    .simple-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 1rem;
+      margin-top: 1rem;
+    }
+
+    .simple-table th,
+    .simple-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .simple-table th {
+      background: rgba(56, 189, 248, 0.14);
+      color: #e0f2fe;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(167, 139, 250, 0.18);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      font-weight: 800;
+      color: #ddd6fe;
+    }
+
+    .calculation-line {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 0.85rem;
+      margin: 0.75rem 0;
+      line-height: 1.6;
+    }
+
+    .highlight-number {
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    @media (max-width: 960px) {
+      .grid,
+      .explain-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-grid,
+      .video-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .metric-grid,
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="tag">Laboratorio interactivo · Ciencia de datos</div>
+    <h1>Entrena tu propio algoritmo de recomendaciones</h1>
+    <p>
+      Ajusta los pesos del algoritmo y observa cómo cambian las recomendaciones,
+      el engagement, la diversidad y el riesgo de crear una burbuja de contenido.
+    </p>
+  </header>
+
+  <main>
+    <nav class="tabs" aria-label="Pestañas de la actividad">
+      <button class="tab-button active" data-tab="simulatorTab">🚀 Simulador</button>
+      <button class="tab-button" data-tab="explanationTab">🧠 ¿Cómo calcula?</button>
+      <button class="tab-button" data-tab="learningTab">🎚️ ¿Cómo aprende?</button>
+    </nav>
+
+    <section id="simulatorTab" class="tab-content active">
+      <section class="mission">
+        <h2>🎯 Misión</h2>
+        <p>
+          Eres parte del equipo de ciencia de datos de una app de videos cortos.
+          Tu tarea es diseñar un algoritmo que recomiende buenos videos, mantenga a los usuarios interesados
+          y evite mostrar siempre el mismo tipo de contenido.
+        </p>
+      </section>
+
+      <section class="grid">
+        <aside class="panel">
+          <h2>⚙️ Ajusta el algoritmo</h2>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="interest">Interés del usuario</label>
+              <span class="value" id="interestValue">50</span>
+            </div>
+            <input id="interest" type="range" min="0" max="100" value="50" />
+            <p class="hint">Qué tanto pesa que el video coincida con los gustos del usuario.</p>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="popularity">Popularidad del video</label>
+              <span class="value" id="popularityValue">50</span>
+            </div>
+            <input id="popularity" type="range" min="0" max="100" value="50" />
+            <p class="hint">Qué tanto favoreces videos que ya son virales.</p>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="watchTime">Tiempo de visualización</label>
+              <span class="value" id="watchTimeValue">50</span>
+            </div>
+            <input id="watchTime" type="range" min="0" max="100" value="50" />
+            <p class="hint">Qué tanto premias videos que la gente suele ver hasta el final.</p>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="diversity">Diversidad del contenido</label>
+              <span class="value" id="diversityValue">50</span>
+            </div>
+            <input id="diversity" type="range" min="0" max="100" value="50" />
+            <p class="hint">Qué tanto exploras temas distintos para evitar repetir lo mismo.</p>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="novelty">Contenido nuevo</label>
+              <span class="value" id="noveltyValue">50</span>
+            </div>
+            <input id="novelty" type="range" min="0" max="100" value="50" />
+            <p class="hint">Qué tanto das oportunidad a videos nuevos o poco conocidos.</p>
+          </div>
+
+          <div class="button-row">
+            <button id="balancedPreset">Modo balanceado</button>
+            <button class="secondary" id="viralPreset">Modo viral</button>
+            <button class="secondary" id="explorePreset">Modo explorador</button>
+          </div>
+        </aside>
+
+        <section>
+          <div class="metrics">
+            <h2>📊 Resultados del algoritmo</h2>
+            <div class="metric-grid">
+              <article class="metric-card">
+                <h3>Engagement</h3>
+                <div class="metric-value" id="engagementMetric">0%</div>
+                <div class="bar"><div class="bar-fill" id="engagementBar"></div></div>
+              </article>
+
+              <article class="metric-card">
+                <h3>Retención</h3>
+                <div class="metric-value" id="retentionMetric">0%</div>
+                <div class="bar"><div class="bar-fill" id="retentionBar"></div></div>
+              </article>
+
+              <article class="metric-card">
+                <h3>Diversidad</h3>
+                <div class="metric-value" id="diversityMetric">0%</div>
+                <div class="bar"><div class="bar-fill" id="diversityBar"></div></div>
+              </article>
+
+              <article class="metric-card">
+                <h3>Burbuja</h3>
+                <div class="metric-value" id="bubbleMetric">0%</div>
+                <div class="bar"><div class="bar-fill" id="bubbleBar"></div></div>
+              </article>
+
+              <article class="metric-card">
+                <h3>Satisfacción</h3>
+                <div class="metric-value" id="satisfactionMetric">0%</div>
+                <div class="bar"><div class="bar-fill" id="satisfactionBar"></div></div>
+              </article>
+            </div>
+            <div class="feedback" id="feedbackBox">Ajusta los controles para entrenar tu algoritmo.</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="videos">
+        <h2>🎬 Videos recomendados</h2>
+        <p class="hint">Estos son los primeros videos que tu algoritmo recomendaría según los pesos actuales.</p>
+        <div class="video-grid" id="videoGrid"></div>
+      </section>
+
+      <section class="challenge">
+        <h2>🧩 Reto para estudiantes</h2>
+        <p>Durante la actividad, intenta construir un algoritmo que cumpla estas tres condiciones:</p>
+        <ul>
+          <li>Engagement mayor o igual al 70%.</li>
+          <li>Diversidad mayor o igual al 60%.</li>
+          <li>Burbuja algorítmica menor o igual al 45%.</li>
+        </ul>
+        <p>
+          Al final, discute con tu grupo: ¿qué peso fue más importante?, ¿qué sacrificaste para mejorar el resultado?,
+          ¿qué consecuencias podría tener este algoritmo en la vida real?
+        </p>
+      </section>
+    </section>
+
+    <section id="explanationTab" class="tab-content">
+      <section class="explain-card">
+        <h2>🧠 ¿De dónde salen los números?</h2>
+        <p>
+          El algoritmo no “adivina”. Lo que hace es combinar información de cada video con los pesos que tú ajustas.
+          Si subes un peso, le estás diciendo al algoritmo: <strong>“esto me importa más”</strong>.
+        </p>
+      </section>
+
+      <section class="explain-grid">
+        <article class="explain-card">
+          <h2>1. Score de recomendación</h2>
+          <p>Para ordenar los videos, el algoritmo calcula un puntaje para cada video:</p>
+          <div class="formula">
+            Score = promedio ponderado de:<br />
+            interés + popularidad + tiempo de visualización + diversidad + novedad
+          </div>
+          <p>
+            En palabras sencillas: cada video recibe una nota. Los videos con nota más alta aparecen primero.
+          </p>
+
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Qué significa</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pill">Interés</span></td>
+                <td>Qué tanto coincide el video con los gustos del usuario.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Popularidad</span></td>
+                <td>Qué tan viral o visto es el video.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Tiempo</span></td>
+                <td>Qué tanto suelen quedarse las personas viendo ese video.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Diversidad</span></td>
+                <td>Qué tanto ayuda el video a no mostrar siempre lo mismo.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Novedad</span></td>
+                <td>Qué tanto favorece videos nuevos o poco conocidos.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="explain-card">
+          <h2>2. Ejemplo con tus valores actuales</h2>
+          <p class="hint">Este ejemplo cambia en vivo cuando mueves los sliders.</p>
+
+          <div class="calculation-line">
+            Video de ejemplo:<br />
+            <strong id="exampleVideoTitle">---</strong>
+          </div>
+
+          <div class="calculation-line" id="weightsSummary">
+            Pesos actuales: ---
+          </div>
+
+          <div class="calculation-line" id="videoDataSummary">
+            Datos del video: ---
+          </div>
+
+          <div class="calculation-line">
+            Score aproximado del video:<br />
+            <span class="highlight-number" id="exampleScore">---</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="explain-card">
+        <h2>3. ¿Cómo se calculan las métricas generales?</h2>
+        <p>Las métricas resumen el comportamiento de todo el algoritmo, no de un solo video.</p>
+
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>Métrica</th>
+              <th>Idea intuitiva</th>
+              <th>Interpretación</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Engagement</td>
+              <td>Sube cuando pesan más el interés, la popularidad y el tiempo de visualización.</td>
+              <td>Qué tanto engancha el algoritmo.</td>
+            </tr>
+            <tr>
+              <td>Retención</td>
+              <td>Sube cuando el algoritmo recomienda videos que las personas suelen terminar.</td>
+              <td>Qué tanto mantiene al usuario en la app.</td>
+            </tr>
+            <tr>
+              <td>Diversidad</td>
+              <td>Sube cuando aparecen más categorías distintas.</td>
+              <td>Qué tan variada es la recomendación.</td>
+            </tr>
+            <tr>
+              <td>Burbuja</td>
+              <td>Sube cuando se exagera el interés y la popularidad, y baja la diversidad.</td>
+              <td>Riesgo de mostrar siempre contenido parecido.</td>
+            </tr>
+            <tr>
+              <td>Satisfacción</td>
+              <td>Combina engagement, retención, diversidad y baja burbuja.</td>
+              <td>Balance general del algoritmo.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="challenge">
+        <h2>💬 Preguntas para discusión</h2>
+        <ul>
+          <li>¿Qué pasa si solo recomendamos videos virales?</li>
+          <li>¿Por qué un algoritmo con alto engagement podría no ser el más sano?</li>
+          <li>¿Qué significa que un algoritmo cree una “burbuja”?</li>
+          <li>¿Qué decisiones humanas hay detrás de un algoritmo?</li>
+        </ul>
+      </section>
+    </section>
+    <section id="learningTab" class="tab-content">
+      <section class="explain-card">
+        <h2>🎚️ ¿Qué pasa si cambio los pesos?</h2>
+        <p>
+          Un peso es como el volumen de una característica. Si subes un peso, el algoritmo escucha más esa señal.
+          Si lo bajas, esa señal importa menos. Por eso, cambiar pesos cambia las recomendaciones.
+        </p>
+      </section>
+
+      <section class="explain-grid">
+        <article class="explain-card">
+          <h2>1. Efecto de cada peso</h2>
+
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>Si subes este peso...</th>
+                <th>El algoritmo tiende a...</th>
+                <th>Posible riesgo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="pill">Interés</span></td>
+                <td>Mostrar videos muy parecidos a lo que el usuario ya vio o ya le gustó.</td>
+                <td>Puede encerrar al usuario en una burbuja.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Popularidad</span></td>
+                <td>Recomendar videos virales o con muchas vistas.</td>
+                <td>Los creadores nuevos tienen menos oportunidad.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Tiempo de visualización</span></td>
+                <td>Favorecer videos que las personas suelen terminar.</td>
+                <td>Puede priorizar contenido adictivo.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Diversidad</span></td>
+                <td>Mezclar categorías distintas y evitar repetir siempre lo mismo.</td>
+                <td>Puede bajar el engagement si explora demasiado.</td>
+              </tr>
+              <tr>
+                <td><span class="pill">Novedad</span></td>
+                <td>Darle oportunidad a videos nuevos o poco conocidos.</td>
+                <td>Puede recomendar contenido menos probado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="explain-card">
+          <h2>2. Mini experimento</h2>
+          <p>Prueba estos escenarios en la pestaña del simulador:</p>
+
+          <div class="calculation-line">
+            <strong>Escenario A: algoritmo viral</strong><br>
+            Sube popularidad y tiempo de visualización. Baja diversidad y novedad.<br>
+            Pregunta: ¿sube la burbuja?
+          </div>
+
+          <div class="calculation-line">
+            <strong>Escenario B: algoritmo explorador</strong><br>
+            Sube diversidad y novedad. Baja popularidad.<br>
+            Pregunta: ¿qué pasa con el engagement?
+          </div>
+
+          <div class="calculation-line">
+            <strong>Escenario C: algoritmo balanceado</strong><br>
+            Ningún peso domina completamente a los demás.<br>
+            Pregunta: ¿es posible tener buen engagement sin crear tanta burbuja?
+          </div>
+        </article>
+      </section>
+
+      <section class="explain-card">
+        <h2>3. ¿Cómo se podrían cambiar los pesos en la vida real?</h2>
+        <p>
+          En esta actividad los cambias a mano con sliders. En una aplicación real, los pesos podrían ajustarse de varias maneras:
+        </p>
+
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>Forma de cambiar pesos</th>
+              <th>Idea sencilla</th>
+              <th>Ejemplo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Manual</strong></td>
+              <td>Una persona decide qué importa más según el objetivo.</td>
+              <td>“Queremos más diversidad, subamos ese peso”.</td>
+            </tr>
+            <tr>
+              <td><strong>Por reglas</strong></td>
+              <td>El sistema cambia pesos cuando detecta una situación.</td>
+              <td>Si el usuario ve siempre deportes, incluir algunos videos de ciencia o música.</td>
+            </tr>
+            <tr>
+              <td><strong>Con datos</strong></td>
+              <td>El algoritmo prueba muchas combinaciones y aprende cuáles funcionan mejor.</td>
+              <td>Comparar cuál combinación genera buen engagement sin aumentar demasiado la burbuja.</td>
+            </tr>
+            <tr>
+              <td><strong>Con retroalimentación</strong></td>
+              <td>El usuario da señales: ver, saltar, guardar, compartir o marcar “no me interesa”.</td>
+              <td>Si muchas personas saltan un tipo de video, ese patrón pierde peso.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="challenge">
+        <h2>🤔 Idea clave</h2>
+        <p>
+          En ciencia de datos no solo importa que el modelo funcione. También importa
+          <strong>qué objetivo optimiza</strong> y <strong>qué consecuencias produce</strong>.
+        </p>
+        <p>
+          Un algoritmo puede ser muy bueno aumentando el tiempo en pantalla, pero no necesariamente ser bueno
+          para informar, educar o cuidar el bienestar del usuario.
+        </p>
+      </section>
+    </section>
+
+  </main>
+
+  <script>
+    const sliders = {
+      interest: document.getElementById("interest"),
+      popularity: document.getElementById("popularity"),
+      watchTime: document.getElementById("watchTime"),
+      diversity: document.getElementById("diversity"),
+      novelty: document.getElementById("novelty")
+    };
+
+    const values = {
+      interest: document.getElementById("interestValue"),
+      popularity: document.getElementById("popularityValue"),
+      watchTime: document.getElementById("watchTimeValue"),
+      diversity: document.getElementById("diversityValue"),
+      novelty: document.getElementById("noveltyValue")
+    };
+
+    const videos = [
+      { title: "Truco de fútbol imposible", category: "Deportes", interest: 92, popularity: 80, watchTime: 75, novelty: 40 },
+      { title: "Rutina rápida de baile", category: "Música", interest: 85, popularity: 95, watchTime: 82, novelty: 35 },
+      { title: "Dato curioso de ciencia", category: "Ciencia", interest: 70, popularity: 50, watchTime: 68, novelty: 78 },
+      { title: "Reto viral de comida", category: "Comida", interest: 76, popularity: 90, watchTime: 71, novelty: 32 },
+      { title: "Mini tutorial de programación", category: "Tecnología", interest: 66, popularity: 45, watchTime: 73, novelty: 86 },
+      { title: "Historias de terror", category: "Entretenimiento", interest: 88, popularity: 76, watchTime: 89, novelty: 50 },
+      { title: "Consejos para estudiar mejor", category: "Educación", interest: 74, popularity: 48, watchTime: 77, novelty: 82 },
+      { title: "Mascotas haciendo travesuras", category: "Animales", interest: 80, popularity: 88, watchTime: 70, novelty: 45 },
+      { title: "Experimento casero", category: "Ciencia", interest: 69, popularity: 58, watchTime: 72, novelty: 76 },
+      { title: "Nuevo artista urbano", category: "Música", interest: 73, popularity: 60, watchTime: 67, novelty: 90 },
+      { title: "Historia de un videojuego", category: "Gaming", interest: 91, popularity: 70, watchTime: 84, novelty: 55 },
+      { title: "Viaje por Colombia", category: "Viajes", interest: 62, popularity: 52, watchTime: 65, novelty: 88 }
+    ];
+
+    function clamp(value, min = 0, max = 100) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function getWeights() {
+      return Object.fromEntries(
+        Object.entries(sliders).map(([key, slider]) => [key, Number(slider.value)])
+      );
+    }
+
+    function getDiversityBonus(video) {
+      return 100 - Math.abs(video.interest - 70);
+    }
+
+    function calculateVideoScore(video, weights) {
+      const totalWeight = weights.interest + weights.popularity + weights.watchTime + weights.diversity + weights.novelty;
+      const safeTotal = totalWeight === 0 ? 1 : totalWeight;
+      const diversityBonus = getDiversityBonus(video);
+
+      return (
+        video.interest * weights.interest +
+        video.popularity * weights.popularity +
+        video.watchTime * weights.watchTime +
+        diversityBonus * weights.diversity +
+        video.novelty * weights.novelty
+      ) / safeTotal;
+    }
+
+    function calculateMetrics(weights, recommendedVideos) {
+      const avg = (items, key) => items.reduce((sum, item) => sum + item[key], 0) / items.length;
+      const categories = new Set(recommendedVideos.map(video => video.category));
+
+      const engagement = clamp((weights.interest * 0.42) + (weights.popularity * 0.28) + (weights.watchTime * 0.3));
+      const retention = clamp((weights.watchTime * 0.5) + (avg(recommendedVideos, "watchTime") * 0.35) + (weights.interest * 0.15));
+      const diversity = clamp((weights.diversity * 0.55) + (categories.size / recommendedVideos.length) * 45);
+      const bubble = clamp((weights.interest * 0.38) + (weights.popularity * 0.32) + ((100 - weights.diversity) * 0.3));
+      const satisfaction = clamp((engagement * 0.35) + (retention * 0.25) + (diversity * 0.25) + ((100 - bubble) * 0.15));
+
+      return { engagement, retention, diversity, bubble, satisfaction };
+    }
+
+    function setMetric(name, value) {
+      const rounded = Math.round(value);
+      document.getElementById(`${name}Metric`).textContent = `${rounded}%`;
+      document.getElementById(`${name}Bar`).style.width = `${rounded}%`;
+
+      if (name === "bubble") {
+        document.getElementById(`${name}Bar`).style.background = rounded > 65 ? "var(--bad)" : rounded > 45 ? "var(--warn)" : "var(--good)";
+        return;
+      }
+
+      document.getElementById(`${name}Bar`).style.background = rounded >= 70 ? "var(--good)" : rounded >= 45 ? "var(--warn)" : "var(--bad)";
+    }
+
+    function getFeedback(metrics, weights) {
+      if (metrics.engagement >= 70 && metrics.diversity >= 60 && metrics.bubble <= 45) {
+        return "Excelente balance: tu algoritmo mantiene el interés, recomienda contenido variado y reduce la burbuja algorítmica.";
+      }
+
+      if (metrics.bubble > 65) {
+        return "Cuidado: tu algoritmo puede ser muy adictivo, pero está encerrando al usuario en una burbuja de contenido.";
+      }
+
+      if (metrics.diversity < 45) {
+        return "El algoritmo está recomendando contenido muy repetitivo. Sube la diversidad o el contenido nuevo para explorar mejor.";
+      }
+
+      if (metrics.engagement < 45) {
+        return "El algoritmo todavía no engancha al usuario. Revisa el peso del interés, la popularidad o el tiempo de visualización.";
+      }
+
+      if (weights.popularity > 80 && weights.novelty < 30) {
+        return "Estás premiando demasiado lo viral. Los videos nuevos casi no tienen oportunidad de aparecer.";
+      }
+
+      return "Buen intento: el algoritmo funciona, pero todavía puedes mejorar el balance entre interés, diversidad y riesgo de burbuja.";
+    }
+
+    function renderVideos(recommendedVideos) {
+      const videoGrid = document.getElementById("videoGrid");
+      videoGrid.innerHTML = "";
+
+      recommendedVideos.forEach((video, index) => {
+        const card = document.createElement("article");
+        card.className = "video-card";
+        card.innerHTML = `
+          <span class="category">${video.category}</span>
+          <h3>${index + 1}. ${video.title}</h3>
+          <div class="score">Score del algoritmo: ${Math.round(video.score)}%</div>
+        `;
+        videoGrid.appendChild(card);
+      });
+    }
+
+    function updateExplanation(weights, rankedVideos) {
+      const exampleVideo = rankedVideos[0];
+      const totalWeight = weights.interest + weights.popularity + weights.watchTime + weights.diversity + weights.novelty;
+      const diversityBonus = Math.round(getDiversityBonus(exampleVideo));
+      const score = Math.round(exampleVideo.score);
+
+      document.getElementById("exampleVideoTitle").textContent = exampleVideo.title;
+      document.getElementById("weightsSummary").innerHTML = `
+        Pesos actuales:<br>
+        interés=${weights.interest}, popularidad=${weights.popularity}, tiempo=${weights.watchTime},
+        diversidad=${weights.diversity}, novedad=${weights.novelty}.
+      `;
+      document.getElementById("videoDataSummary").innerHTML = `
+        Datos del video:<br>
+        interés=${exampleVideo.interest}, popularidad=${exampleVideo.popularity},
+        tiempo=${exampleVideo.watchTime}, diversidad=${diversityBonus}, novedad=${exampleVideo.novelty}.
+      `;
+      document.getElementById("exampleScore").textContent = `
+        (${exampleVideo.interest}×${weights.interest} + ${exampleVideo.popularity}×${weights.popularity} + ${exampleVideo.watchTime}×${weights.watchTime} + ${diversityBonus}×${weights.diversity} + ${exampleVideo.novelty}×${weights.novelty}) ÷ ${totalWeight || 1} ≈ ${score}%
+      `;
+    }
+
+    function update() {
+      const weights = getWeights();
+
+      Object.entries(weights).forEach(([key, value]) => {
+        values[key].textContent = value;
+      });
+
+      const rankedVideos = videos
+        .map(video => ({ ...video, score: calculateVideoScore(video, weights) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+
+      const metrics = calculateMetrics(weights, rankedVideos);
+
+      Object.entries(metrics).forEach(([key, value]) => setMetric(key, value));
+      document.getElementById("feedbackBox").textContent = getFeedback(metrics, weights);
+      renderVideos(rankedVideos);
+      updateExplanation(weights, rankedVideos);
+    }
+
+    function setPreset(preset) {
+      Object.entries(preset).forEach(([key, value]) => {
+        sliders[key].value = value;
+      });
+      update();
+    }
+
+    Object.values(sliders).forEach(slider => slider.addEventListener("input", update));
+
+    document.getElementById("balancedPreset").addEventListener("click", () => {
+      setPreset({ interest: 65, popularity: 45, watchTime: 60, diversity: 70, novelty: 60 });
+    });
+
+    document.getElementById("viralPreset").addEventListener("click", () => {
+      setPreset({ interest: 80, popularity: 90, watchTime: 85, diversity: 20, novelty: 15 });
+    });
+
+    document.getElementById("explorePreset").addEventListener("click", () => {
+      setPreset({ interest: 45, popularity: 25, watchTime: 45, diversity: 90, novelty: 85 });
+    });
+
+    document.querySelectorAll(".tab-button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab-button").forEach(item => item.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(item => item.classList.remove("active"));
+
+        button.classList.add("active");
+        document.getElementById(button.dataset.tab).classList.add("active");
+      });
+    });
+
+    update();
+  </script>
+</body>
+</html>
